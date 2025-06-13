@@ -1,0 +1,141 @@
+description: "TDS Virtual TA Evaluation"
+
+prompts:
+  - id: default
+    label: "Student Query"
+    raw: "{{ question }}"
+
+providers:
+  - id: http
+    config:
+      url: https://tds-virtual-ta-ieja.onrender.com/api/json/  #http://127.0.0.1:8000/api/json/
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "question": "{{ question }}",
+          "image": "{{ image }}"
+        }
+      transformResponse: json
+
+defaultTest:
+  assert:
+    - type: is-json
+      value:
+        type: object
+        required: [answer, links]
+        properties:
+          answer: { type: string }
+          links:
+            type: array
+            items:
+              type: object
+              required: [url, text]
+              properties:
+                url: { type: string }
+                text: { type: string }
+
+tests:
+  # Test 1: Image-only query
+  - vars:
+      image: file://./app/test_images/code_snippet.png
+    assert:
+      - type: is-json
+      - type: icontains
+        path: answer
+        value: utf-8
+
+  # Test 2: Image with question
+  - vars:
+      question: "Can you explain this code?"
+      image: file://./app/test_images/code_snippet.png
+    assert:
+      - type: contains
+        path: answer
+        value: code
+
+  # Test 5: Image with specific content check
+  - vars:
+      question: "What data structures are shown in this diagram?"
+      image: file://./app/test_images/data_structure.png
+    assert:
+      - type: icontains-any
+        path: answer
+        value:
+          - array
+          - list
+          - tree
+          - graph
+          - queue
+          - stack
+
+  # Original test with corrected image path
+  - vars:
+      question: "The question asks to use gpt-3.5-turbo-0125 model but the ai-proxy provided by Anand sir only supports gpt-4o-mini. So should we just use gpt-4o-mini or use the OpenAI API for gpt3.5 turbo?"
+      image: file://./app/test_images/project-tds-virtual-ta-q1.webp
+    assert:
+      - type: contains
+        path: answer
+        value: gpt-4o-mini
+      - type: contains
+        path: answer
+        value: gpt-4o-mini
+
+  # Rest of the original tests...
+  - vars:
+      question: If a student scores 10/10 on GA4 as well as a bonus, how would it appear on the dashboard?
+    assert:
+      - type: regex
+        path: answer
+        value: "\\d{2}"
+
+  - vars:
+      question: I know Docker but have not used Podman before. Should I use Docker for this course?
+    assert:
+      - type: contains
+        path: answer
+        value: Podman
+      - type: contains
+        path: answer
+        value: Docker
+
+  - vars:
+      question: When is the TDS Sep 2025 end-term exam?
+    assert:
+      - type: icontains
+        path: answer
+        value: August 31
+
+  - vars:
+      question: What is vector embeddings?
+    assert:
+      - type: contains
+        path: answer
+        value: vector
+
+  - vars: 
+      question: What is Tools in Data Science?
+    assert:
+      - type: icontains-any
+        path: answer
+        value: 
+          - diploma 
+          - certificate
+          - degree
+
+  - vars:
+      question: What are character encodings?
+    assert:
+      - type: icontains-any
+        path: answer
+        value: 
+          - ASCII
+          - UTF-8
+          - UTF-16
+          - UTF-32
+
+writeLatestResults: true
+
+commandLineOptions:
+  cache: true
